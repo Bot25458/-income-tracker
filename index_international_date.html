@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Income Tracker V2</title>
+<style>
+body{font-family:Arial;max-width:800px;margin:auto;padding:20px}
+input,select,button{width:100%;padding:10px;margin:5px 0;box-sizing:border-box}
+.card{border:1px solid #ddd;padding:10px;margin:10px 0;border-radius:8px}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+.small-btn{width:auto;padding:6px 10px}
+.warning{color:red;font-weight:bold}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<h2>💰 Income Tracker V2</h2>
+
+<label>Monthly Income</label>
+<input type="number" id="income">
+
+<div class="row">
+<div>
+<label>Expense Name</label>
+<input type="text" id="name">
+</div>
+<div>
+<label>Amount</label>
+<input type="number" id="amount">
+</div>
+</div>
+
+<div class="row">
+<div>
+<label>Category</label>
+<select id="category">
+<option>Food</option>
+<option>Rent</option>
+<option>Transport</option>
+<option>Shopping</option>
+<option>Other</option>
+</select>
+</div>
+<div>
+<label>Date</label>
+<input type="date" id="date">
+</div>
+</div>
+
+<button onclick="addExpense()">Add Expense</button>
+
+<h3>Expenses</h3>
+<div id="list"></div>
+
+<p><b>Income:</b> <span id="incomeText"></span></p>
+<p><b>Total Expense:</b> <span id="expenseText"></span></p>
+<p><b>Balance:</b> <span id="balanceText"></span></p>
+<p id="warning" class="warning"></p>
+
+<h3>Monthly Report</h3>
+<div id="report"></div>
+
+<canvas id="pieChart"></canvas>
+
+<script>
+let expenses=JSON.parse(localStorage.getItem("expenses"))||[];
+let pie;
+
+document.getElementById("income").value=localStorage.getItem("income")||"";
+document.getElementById("income").addEventListener("input",()=>{
+localStorage.setItem("income",document.getElementById("income").value);
+update();
+});
+
+function yen(n){return "¥"+Number(n).toLocaleString("ja-JP");}
+
+function save(){
+localStorage.setItem("expenses",JSON.stringify(expenses));
+}
+
+function addExpense(){
+const name=document.getElementById("name").value;
+const amount=Number(document.getElementById("amount").value);
+const category=document.getElementById("category").value;
+const date=document.getElementById("date").value;
+
+if(!name || amount<=0) return;
+
+expenses.push({name,amount,category,date});
+save();
+update();
+
+document.getElementById("name").value="";
+document.getElementById("amount").value="";
+}
+
+function editExpense(i){
+const e=expenses[i];
+const name=prompt("Expense Name",e.name);
+const amount=prompt("Amount",e.amount);
+if(name && amount){
+expenses[i].name=name;
+expenses[i].amount=Number(amount);
+save();
+update();
+}
+}
+
+function deleteExpense(i){
+expenses.splice(i,1);
+save();
+update();
+}
+
+function update(){
+const income=Number(document.getElementById("income").value||0);
+let total=0;
+
+const list=document.getElementById("list");
+list.innerHTML="";
+
+expenses.forEach((e,i)=>{
+total+=e.amount;
+list.innerHTML+=`
+<div class="card">
+${(e.date ? new Date(e.date).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "-")} | ${e.category}<br>
+${e.name} - ${yen(e.amount)}
+<br><br>
+<button class="small-btn" onclick="editExpense(${i})">Edit</button>
+<button class="small-btn" onclick="deleteExpense(${i})">Delete</button>
+</div>`;
+});
+
+const balance=income-total;
+
+incomeText.innerText=yen(income);
+expenseText.innerText=yen(total);
+balanceText.innerText=yen(balance);
+
+warning.innerText=total>income?"⚠️ Expense is higher than Income":"";
+
+const report={};
+const categoryTotals={};
+
+expenses.forEach(e=>{
+if(e.date){
+const m=e.date.substring(0,7);
+report[m]=(report[m]||0)+e.amount;
+}
+categoryTotals[e.category]=(categoryTotals[e.category]||0)+e.amount;
+});
+
+reportDiv="";
+for(const m in report){
+reportDiv+=`<div>${m} : ${yen(report[m])}</div>`;
+}
+document.getElementById("report").innerHTML=reportDiv;
+
+const labels=Object.keys(categoryTotals);
+const data=Object.values(categoryTotals);
+
+if(pie) pie.destroy();
+
+pie=new Chart(document.getElementById("pieChart"),{
+type:"pie",
+data:{
+labels:labels,
+datasets:[{data:data}]
+}
+});
+}
+update();
+</script>
+</body>
+</html>
