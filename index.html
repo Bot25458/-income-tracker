@@ -3,31 +3,51 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Income Tracker</title>
+<title>Finance Tracker</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body{font-family:Arial;max-width:800px;margin:auto;padding:20px}
+body{font-family:Arial;max-width:900px;margin:auto;padding:20px}
 input,select,button{width:100%;padding:10px;margin:5px 0}
-.card{border:1px solid #ddd;padding:10px;margin:10px 0;border-radius:8px}
 .row{display:flex;gap:10px}
 .row>*{flex:1}
+.card{border:1px solid #ddd;padding:10px;margin:10px 0;border-radius:8px}
 button{cursor:pointer}
-.warning{color:red;font-weight:bold}
+.warning{font-weight:bold}
 </style>
 </head>
 
 <body>
 
-<h2>💰 Income Tracker </h2>
+<h2>💰 Finance Tracker </h2>
 
-<label>Monthly Income</label>
-<input type="number" id="income" oninput="render()">
+<!-- INCOME -->
+<h3>💵 Income</h3>
 
 <div class="row">
-<input type="text" id="name" placeholder="Expense name">
-<input type="number" id="amount" placeholder="Amount">
+<input type="text" id="incomeName" placeholder="Income type">
+<input type="number" id="incomeAmount" placeholder="Amount">
+</div>
+<button onclick="addIncome()">Add Income</button>
+
+<div id="incomeList"></div>
+
+<hr>
+
+<!-- BUDGET -->
+<h3>🎯 Budget</h3>
+<input type="number" id="budget" placeholder="Set monthly budget" oninput="render()">
+<p id="budgetStatus" class="warning"></p>
+
+<hr>
+
+<!-- EXPENSE -->
+<h3>💸 Expense</h3>
+
+<div class="row">
+<input type="text" id="expName" placeholder="Expense name">
+<input type="number" id="expAmount" placeholder="Amount">
 </div>
 
 <div class="row">
@@ -45,33 +65,28 @@ button{cursor:pointer}
 <button onclick="addExpense()">Add Expense</button>
 
 <h3>📋 Expenses</h3>
-<div id="list"></div>
+<div id="expenseList"></div>
 
-<h3>💹 Summary</h3>
-<p>Income: <span id="incomeText"></span></p>
-<p>Expense: <span id="expenseText"></span></p>
-<p>Balance: <span id="balanceText"></span></p>
-<p id="warning" class="warning"></p>
+<hr>
 
-<h3>📊 Charts</h3>
+<h3>📊 Summary</h3>
+<p>Total Income: <span id="incomeTotal"></span></p>
+<p>Total Expense: <span id="expenseTotal"></span></p>
+<p>Balance: <span id="balance"></span></p>
+
 <canvas id="barChart"></canvas>
 <canvas id="pieChart"></canvas>
 
 <script type="module">
 
-// 🔥 Firebase imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
 import {
 getFirestore,
 collection,
 addDoc,
-deleteDoc,
-doc,
-updateDoc,
 onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
-// 🔥 YOUR FIREBASE CONFIG
 const firebaseConfig = {
 apiKey: "AIzaSyCB6STfr6FWPbPddQzyooOjtwHSo85KJd8",
 authDomain: "income-tracker-c1b8c.firebaseapp.com",
@@ -84,132 +99,140 @@ appId: "1:809343066758:web:608a4480f1e85d992d6707"
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+let incomes = [];
 let expenses = [];
-let editId = null;
 
-// 🔄 REALTIME LISTENER
-onSnapshot(collection(db, "expenses"), (snap) => {
-expenses = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+/* ================= INCOME ================= */
+
+window.addIncome = async function(){
+let name = document.getElementById("incomeName").value;
+let amount = Number(document.getElementById("incomeAmount").value);
+
+if(!name || amount<=0) return;
+
+await addDoc(collection(db,"incomes"),{name,amount});
+
+document.getElementById("incomeName").value="";
+document.getElementById("incomeAmount").value="";
+};
+
+onSnapshot(collection(db,"incomes"),snap=>{
+incomes = snap.docs.map(d=>({id:d.id,...d.data()}));
 render();
 });
 
-// ➕ ADD / UPDATE
+/* ================= EXPENSE ================= */
+
 window.addExpense = async function(){
+let name = document.getElementById("expName").value;
+let amount = Number(document.getElementById("expAmount").value);
+let category = document.getElementById("category").value;
+let date = document.getElementById("date").value;
 
-const name = document.getElementById("name").value;
-const amount = Number(document.getElementById("amount").value);
-const category = document.getElementById("category").value;
-const date = document.getElementById("date").value;
+if(!name || amount<=0) return;
 
-if(!name || amount <= 0) return;
-
-if(editId){
-await updateDoc(doc(db,"expenses",editId),{
-name,amount,category,date
-});
-editId = null;
-}else{
 await addDoc(collection(db,"expenses"),{
 name,amount,category,date
 });
-}
 
-document.getElementById("name").value="";
-document.getElementById("amount").value="";
-}
+document.getElementById("expName").value="";
+document.getElementById("expAmount").value="";
+};
 
-// ❌ DELETE
-window.deleteExpense = async function(id){
-await deleteDoc(doc(db,"expenses",id));
-}
-
-// ✏️ EDIT
-window.editExpense = function(id){
-const e = expenses.find(x=>x.id===id);
-
-document.getElementById("name").value = e.name;
-document.getElementById("amount").value = e.amount;
-document.getElementById("category").value = e.category;
-document.getElementById("date").value = e.date;
-
-editId = id;
-}
-
-// 🔄 RENDER UI
-window.render = function(){
-
-let income = Number(document.getElementById("income").value || 0);
-let total = 0;
-
-let monthly = {};
-let category = {};
-
-let list = document.getElementById("list");
-list.innerHTML = "";
-
-expenses.forEach(e=>{
-total += e.amount;
-
-// monthly
-if(e.date){
-let m = e.date.substring(0,7);
-monthly[m] = (monthly[m]||0)+e.amount;
-}
-
-// category
-category[e.category] = (category[e.category]||0)+e.amount;
-
-// UI list
-list.innerHTML += `
-<div class="card">
-${e.date || "-"} | ${e.category}<br>
-<b>${e.name}</b> - ¥${e.amount}<br><br>
-
-<button onclick="editExpense('${e.id}')">Edit</button>
-<button onclick="deleteExpense('${e.id}')">Delete</button>
-</div>
-`;
+onSnapshot(collection(db,"expenses"),snap=>{
+expenses = snap.docs.map(d=>({id:d.id,...d.data()}));
+render();
 });
 
-// summary
-document.getElementById("incomeText").innerText = "¥"+income;
-document.getElementById("expenseText").innerText = "¥"+total;
-document.getElementById("balanceText").innerText = "¥"+(income-total);
+/* ================= RENDER ================= */
 
-document.getElementById("warning").innerText =
-total > income ? "⚠️ Over Budget!" : "";
+function render(){
 
-// charts
-drawCharts(monthly,category);
+// TOTALS
+let totalIncome = incomes.reduce((a,b)=>a+b.amount,0);
+let totalExpense = expenses.reduce((a,b)=>a+b.amount,0);
+let balance = totalIncome - totalExpense;
+
+// UI
+document.getElementById("incomeTotal").innerText = "¥"+totalIncome;
+document.getElementById("expenseTotal").innerText = "¥"+totalExpense;
+document.getElementById("balance").innerText = "¥"+balance;
+
+/* LISTS */
+document.getElementById("incomeList").innerHTML =
+incomes.map(i=>`<div class="card">💵 ${i.name} - ¥${i.amount}</div>`).join("");
+
+document.getElementById("expenseList").innerHTML =
+expenses.map(e=>`
+<div class="card">
+${e.date||"-"} | ${e.category}<br>
+${e.name} - ¥${e.amount}
+</div>
+`).join("");
+
+/* ================= BUDGET AI ALERT ================= */
+
+let budget = Number(document.getElementById("budget").value || 0);
+let percent = budget > 0 ? (totalExpense / budget) * 100 : 0;
+
+let status = "";
+let color = "";
+
+if(budget > 0){
+if(percent >= 100){
+status = "🚨 OVER BUDGET!";
+color = "red";
+}
+else if(percent >= 90){
+status = "⚠️ Danger (90% used)";
+color = "orange";
+}
+else if(percent >= 70){
+status = "🟡 Warning (70% used)";
+color = "goldenrod";
+}
+else{
+status = "🟢 Safe";
+color = "green";
 }
 
-let barChart;
-let pieChart;
+document.getElementById("budgetStatus").innerText =
+`${status} (${percent.toFixed(1)}%)`;
 
-// 📊 CHARTS
-function drawCharts(monthly,category){
+document.getElementById("budgetStatus").style.color = color;
+}
 
-if(barChart) barChart.destroy();
-if(pieChart) pieChart.destroy();
+/* CHARTS */
+drawCharts(totalIncome,totalExpense,expenses);
+}
 
-barChart = new Chart(document.getElementById("barChart"),{
+/* ================= CHART ================= */
+
+let bar,pie;
+
+function drawCharts(income,expense,expensesList){
+
+if(bar) bar.destroy();
+if(pie) pie.destroy();
+
+bar = new Chart(document.getElementById("barChart"),{
 type:"bar",
 data:{
-labels:Object.keys(monthly),
-datasets:[{
-label:"Monthly Expense",
-data:Object.values(monthly)
-}]
+labels:["Income","Expense"],
+datasets:[{data:[income,expense]}]
 }
 });
 
-pieChart = new Chart(document.getElementById("pieChart"),{
+let cat = {};
+expensesList.forEach(e=>{
+cat[e.category]=(cat[e.category]||0)+e.amount;
+});
+
+pie = new Chart(document.getElementById("pieChart"),{
 type:"pie",
 data:{
-labels:Object.keys(category),
-datasets:[{
-data:Object.values(category)
-}]
+labels:Object.keys(cat),
+datasets:[{data:Object.values(cat)}]
 }
 });
 }
