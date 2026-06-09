@@ -3,75 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Income Tracker</title>
-
-<style>
-body{
-font-family:Arial;
-max-width:800px;
-margin:auto;
-padding:20px;
-}
-
-input,select,button{
-width:100%;
-padding:10px;
-margin:5px 0;
-box-sizing:border-box;
-}
-
-.card{
-border:1px solid #ddd;
-padding:10px;
-margin:10px 0;
-border-radius:8px;
-}
-
-.row{
-display:flex;
-gap:10px;
-}
-
-.row>*{
-flex:1;
-}
-
-.small-btn{
-width:auto;
-padding:6px 10px;
-}
-
-.warning{
-color:red;
-font-weight:bold;
-}
-</style>
+<title>Income Tracker Firebase FULL</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{font-family:Arial;max-width:800px;margin:auto;padding:20px}
+input,select,button{width:100%;padding:10px;margin:5px 0}
+.card{border:1px solid #ddd;padding:10px;margin:10px 0;border-radius:8px}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+button{cursor:pointer}
+.warning{color:red;font-weight:bold}
+</style>
 </head>
 
 <body>
 
-<h2>💰 Income Tracker V2</h2>
+<h2>💰 Income Tracker (Firebase FULL)</h2>
 
 <label>Monthly Income</label>
-<input type="number" id="income">
+<input type="number" id="income" oninput="render()">
 
 <div class="row">
-<div>
-<label>Expense Name</label>
-<input type="text" id="name">
-</div>
-
-<div>
-<label>Amount</label>
-<input type="number" id="amount">
-</div>
+<input type="text" id="name" placeholder="Expense name">
+<input type="number" id="amount" placeholder="Amount">
 </div>
 
 <div class="row">
-<div>
-<label>Category</label>
 <select id="category">
 <option>Food</option>
 <option>Rent</option>
@@ -79,66 +38,64 @@ font-weight:bold;
 <option>Shopping</option>
 <option>Other</option>
 </select>
-</div>
 
-<div>
-<label>Date</label>
 <input type="date" id="date">
-</div>
 </div>
 
 <button onclick="addExpense()">Add Expense</button>
 
-<input type="text" id="search" placeholder="🔍 Search Expense">
-
-<h3>📈 Budget Usage</h3>
-<progress id="budgetBar" value="0" max="100" style="width:100%"></progress>
-<p id="budgetPercent"></p>
-
-<h3>💹 Savings Rate</h3>
-<p id="savingsRate"></p>
-
-<h3>📊 Monthly Expense Trend</h3>
-<canvas id="barChart"></canvas>
-
-<h3>Expenses</h3>
+<h3>📋 Expenses</h3>
 <div id="list"></div>
 
-<p><b>Income:</b> <span id="incomeText"></span></p>
-<p><b>Total Expense:</b> <span id="expenseText"></span></p>
-<p><b>Balance:</b> <span id="balanceText"></span></p>
+<h3>💹 Summary</h3>
+<p>Income: <span id="incomeText"></span></p>
+<p>Expense: <span id="expenseText"></span></p>
+<p>Balance: <span id="balanceText"></span></p>
 <p id="warning" class="warning"></p>
 
-<h3>Monthly Report</h3>
-<div id="report"></div>
-
+<h3>📊 Charts</h3>
+<canvas id="barChart"></canvas>
 <canvas id="pieChart"></canvas>
 
-<script>
-let expenses = JSON.parse(localStorage.getItem("expenses")) || [];
-let pie = null;
-let barChart = null;
+<script type="module">
 
-// load income
-document.getElementById("income").value =
-localStorage.getItem("income") || "";
+// 🔥 Firebase imports
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+import {
+getFirestore,
+collection,
+addDoc,
+deleteDoc,
+doc,
+updateDoc,
+onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
-document.getElementById("income").addEventListener("input", () => {
-localStorage.setItem("income", document.getElementById("income").value);
-update();
+// 🔥 YOUR FIREBASE CONFIG
+const firebaseConfig = {
+apiKey: "AIzaSyCB6STfr6FWPbPddQzyooOjtwHSo85KJd8",
+authDomain: "income-tracker-c1b8c.firebaseapp.com",
+projectId: "income-tracker-c1b8c",
+storageBucket: "income-tracker-c1b8c.appspot.com",
+messagingSenderId: "809343066758",
+appId: "1:809343066758:web:608a4480f1e85d992d6707"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let expenses = [];
+let editId = null;
+
+// 🔄 REALTIME LISTENER
+onSnapshot(collection(db, "expenses"), (snap) => {
+expenses = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+render();
 });
 
-document.getElementById("search").addEventListener("input", update);
+// ➕ ADD / UPDATE
+window.addExpense = async function(){
 
-function yen(n){
-return "¥" + Number(n).toLocaleString("ja-JP");
-}
-
-function save(){
-localStorage.setItem("expenses", JSON.stringify(expenses));
-}
-
-function addExpense(){
 const name = document.getElementById("name").value;
 const amount = Number(document.getElementById("amount").value);
 const category = document.getElementById("category").value;
@@ -146,151 +103,117 @@ const date = document.getElementById("date").value;
 
 if(!name || amount <= 0) return;
 
-expenses.push({name, amount, category, date});
-save();
-update();
-
-document.getElementById("name").value = "";
-document.getElementById("amount").value = "";
+if(editId){
+await updateDoc(doc(db,"expenses",editId),{
+name,amount,category,date
+});
+editId = null;
+}else{
+await addDoc(collection(db,"expenses"),{
+name,amount,category,date
+});
 }
 
-function editExpense(i){
-const e = expenses[i];
-const name = prompt("Expense Name", e.name);
-const amount = prompt("Amount", e.amount);
-
-if(name && amount){
-expenses[i].name = name;
-expenses[i].amount = Number(amount);
-save();
-update();
-}
+document.getElementById("name").value="";
+document.getElementById("amount").value="";
 }
 
-function deleteExpense(i){
-expenses.splice(i, 1);
-save();
-update();
+// ❌ DELETE
+window.deleteExpense = async function(id){
+await deleteDoc(doc(db,"expenses",id));
 }
 
-function update(){
+// ✏️ EDIT
+window.editExpense = function(id){
+const e = expenses.find(x=>x.id===id);
 
-const income = Number(document.getElementById("income").value || 0);
+document.getElementById("name").value = e.name;
+document.getElementById("amount").value = e.amount;
+document.getElementById("category").value = e.category;
+document.getElementById("date").value = e.date;
+
+editId = id;
+}
+
+// 🔄 RENDER UI
+window.render = function(){
+
+let income = Number(document.getElementById("income").value || 0);
 let total = 0;
 
-const list = document.getElementById("list");
+let monthly = {};
+let category = {};
+
+let list = document.getElementById("list");
 list.innerHTML = "";
 
-const keyword = document.getElementById("search").value.toLowerCase();
-
-const filtered = expenses.filter(e =>
-e.name.toLowerCase().includes(keyword)
-);
-
-filtered.forEach((e, i) => {
+expenses.forEach(e=>{
 total += e.amount;
 
+// monthly
+if(e.date){
+let m = e.date.substring(0,7);
+monthly[m] = (monthly[m]||0)+e.amount;
+}
+
+// category
+category[e.category] = (category[e.category]||0)+e.amount;
+
+// UI list
 list.innerHTML += `
 <div class="card">
-${e.date ? new Date(e.date).toLocaleDateString("en-GB") : "-"} | ${e.category}<br>
-${e.name} - ${yen(e.amount)}<br><br>
+${e.date || "-"} | ${e.category}<br>
+<b>${e.name}</b> - ¥${e.amount}<br><br>
 
-<button class="small-btn" onclick="editExpense(${i})">Edit</button>
-<button class="small-btn" onclick="deleteExpense(${i})">Delete</button>
+<button onclick="editExpense('${e.id}')">Edit</button>
+<button onclick="deleteExpense('${e.id}')">Delete</button>
 </div>
 `;
 });
 
-const balance = income - total;
-
-// UI update safe way
-document.getElementById("incomeText").innerText = yen(income);
-document.getElementById("expenseText").innerText = yen(total);
-document.getElementById("balanceText").innerText = yen(balance);
+// summary
+document.getElementById("incomeText").innerText = "¥"+income;
+document.getElementById("expenseText").innerText = "¥"+total;
+document.getElementById("balanceText").innerText = "¥"+(income-total);
 
 document.getElementById("warning").innerText =
-total > income ? "⚠️ Expense is higher than Income" : "";
+total > income ? "⚠️ Over Budget!" : "";
 
-// budget %
-const percent = income > 0 ? (total / income) * 100 : 0;
+// charts
+drawCharts(monthly,category);
+}
 
-document.getElementById("budgetBar").value = percent;
-document.getElementById("budgetPercent").innerText =
-percent.toFixed(1) + "% Used";
+let barChart;
+let pieChart;
 
-// savings rate
-const savingsRate = income > 0 ? (balance / income) * 100 : 0;
-document.getElementById("savingsRate").innerText =
-savingsRate.toFixed(1) + "%";
-
-// monthly totals
-const monthlyTotals = {};
-
-expenses.forEach(e => {
-if(!e.date) return;
-const m = e.date.substring(0,7);
-monthlyTotals[m] = (monthlyTotals[m] || 0) + e.amount;
-});
-
-// chart labels fix
-const monthLabels = Object.keys(monthlyTotals);
-const monthValues = Object.values(monthlyTotals);
+// 📊 CHARTS
+function drawCharts(monthly,category){
 
 if(barChart) barChart.destroy();
+if(pieChart) pieChart.destroy();
 
-barChart = new Chart(
-document.getElementById("barChart"),
-{
-type: "bar",
-data: {
-labels: monthLabels,
-datasets: [{
-label: "Monthly Expense",
-data: monthValues
+barChart = new Chart(document.getElementById("barChart"),{
+type:"bar",
+data:{
+labels:Object.keys(monthly),
+datasets:[{
+label:"Monthly Expense",
+data:Object.values(monthly)
 }]
 }
-}
-);
-
-// category report
-const report = {};
-const categoryTotals = {};
-
-expenses.forEach(e => {
-if(e.date){
-const m = e.date.substring(0,7);
-report[m] = (report[m] || 0) + e.amount;
-}
-categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount;
 });
 
-let reportDiv = "";
-for(const m in report){
-reportDiv += `<div>${m} : ${yen(report[m])}</div>`;
-}
-document.getElementById("report").innerHTML = reportDiv;
-
-// pie chart fix
-const categoryLabels = Object.keys(categoryTotals);
-const categoryData = Object.values(categoryTotals);
-
-if(pie) pie.destroy();
-
-pie = new Chart(
-document.getElementById("pieChart"),
-{
-type: "pie",
-data: {
-labels: categoryLabels,
-datasets: [{
-data: categoryData
+pieChart = new Chart(document.getElementById("pieChart"),{
+type:"pie",
+data:{
+labels:Object.keys(category),
+datasets:[{
+data:Object.values(category)
 }]
 }
-}
-);
+});
 }
 
-update();
 </script>
 
 </body>
