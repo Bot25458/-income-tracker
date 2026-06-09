@@ -101,6 +101,8 @@ document.getElementById("income").addEventListener("input",()=>{
 localStorage.setItem("income",document.getElementById("income").value);
 update();
 });
+document.getElementById("search")
+.addEventListener("input", update);
 
 function yen(n){return "¥"+Number(n).toLocaleString("ja-JP");}
 
