@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Finance Tracker</title>
+<title>Finance</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -15,6 +15,7 @@ input,select,button{width:100%;padding:10px;margin:5px 0}
 .card{border:1px solid #ddd;padding:10px;margin:10px 0;border-radius:8px}
 button{cursor:pointer}
 .warning{font-weight:bold}
+
 #undoBox{
 display:none;
 position:fixed;
@@ -32,7 +33,7 @@ text-align:center;
 
 <body>
 
-<h2>💰 Finance Tracker </h2>
+<h2> Finance </h2>
 
 <!-- INCOME -->
 <h3>💵 Income</h3>
@@ -121,7 +122,9 @@ const db = getFirestore(app);
 
 let incomes = [];
 let expenses = [];
+
 let lastDeleted = null;
+let lastType = null; // income or expense
 
 /* ================= INCOME ================= */
 
@@ -165,14 +168,18 @@ expenses = snap.docs.map(d=>({id:d.id,...d.data()}));
 render();
 });
 
-/* ================= DELETE ================= */
+/* ================= DELETE (INCOME + EXPENSE) ================= */
 
-window.deleteExpense = async function(id){
+window.deleteItem = async function(id,type){
 
-let item = expenses.find(e=>e.id===id);
+let item = (type==="income")
+? incomes.find(i=>i.id===id)
+: expenses.find(e=>e.id===id);
+
 lastDeleted = item;
+lastType = type;
 
-await deleteDoc(doc(db,"expenses",id));
+await deleteDoc(doc(db,type==="income"?"incomes":"expenses",id));
 
 showUndo();
 }
@@ -185,22 +192,26 @@ document.getElementById("undoBox").style.display="block";
 setTimeout(()=>{
 document.getElementById("undoBox").style.display="none";
 lastDeleted=null;
+lastType=null;
 },8000);
 }
 
 window.undoDelete = async function(){
 
-if(!lastDeleted) return;
+if(!lastDeleted || !lastType) return;
 
-await addDoc(collection(db,"expenses"),{
+await addDoc(collection(db,lastType==="income"?"incomes":"expenses"),{
 name:lastDeleted.name,
 amount:lastDeleted.amount,
+...(lastType==="expense" && {
 category:lastDeleted.category,
 date:lastDeleted.date
+})
 });
 
 document.getElementById("undoBox").style.display="none";
 lastDeleted=null;
+lastType=null;
 }
 
 /* ================= RENDER ================= */
@@ -216,25 +227,30 @@ document.getElementById("incomeTotal").innerText="¥"+totalIncome;
 document.getElementById("expenseTotal").innerText="¥"+totalExpense;
 document.getElementById("balance").innerText="¥"+balance;
 
-// list
+// INCOME LIST
 document.getElementById("incomeList").innerHTML =
-incomes.map(i=>`<div class="card">💵 ${i.name} - ¥${i.amount}</div>`).join("");
+incomes.map(i=>`
+<div class="card">
+💵 ${i.name} - ¥${i.amount}<br><br>
+<button onclick="deleteItem('${i.id}','income')">🗑 Delete</button>
+</div>
+`).join("");
 
+// EXPENSE LIST
 document.getElementById("expenseList").innerHTML =
 expenses.map(e=>`
 <div class="card">
 ${e.date||"-"} | ${e.category}<br>
 ${e.name} - ¥${e.amount}<br><br>
-<button onclick="deleteExpense('${e.id}')">🗑 Delete</button>
+<button onclick="deleteItem('${e.id}','expense')">🗑 Delete</button>
 </div>
 `).join("");
 
-// budget AI
+// BUDGET AI
 let budget = Number(document.getElementById("budget").value || 0);
 let percent = budget>0?(totalExpense/budget)*100:0;
 
-let text="";
-let color="";
+let text="",color="";
 
 if(budget>0){
 if(percent>=100){text="🚨 OVER BUDGET";color="red";}
