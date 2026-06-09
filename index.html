@@ -151,7 +151,16 @@ let total=0;
 const list=document.getElementById("list");
 list.innerHTML="";
 
-expenses.forEach((e,i)=>{
+const keyword =
+document.getElementById("search")
+.value.toLowerCase();
+
+expenses
+.filter(e =>
+e.name.toLowerCase()
+.includes(keyword)
+)
+.forEach((e,i)=>{
 total+=e.amount;
 list.innerHTML+=`
 <div class="card">
