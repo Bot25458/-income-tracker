@@ -15,6 +15,18 @@ input,select,button{width:100%;padding:10px;margin:5px 0}
 .card{border:1px solid #ddd;padding:10px;margin:10px 0;border-radius:8px}
 button{cursor:pointer}
 .warning{font-weight:bold}
+#undoBox{
+display:none;
+position:fixed;
+bottom:20px;
+left:20px;
+right:20px;
+background:#333;
+color:white;
+padding:12px;
+border-radius:10px;
+text-align:center;
+}
 </style>
 </head>
 
@@ -37,7 +49,7 @@ button{cursor:pointer}
 
 <!-- BUDGET -->
 <h3>🎯 Budget</h3>
-<input type="number" id="budget" placeholder="Set monthly budget" oninput="render()">
+<input type="number" id="budget" placeholder="Set budget" oninput="render()">
 <p id="budgetStatus" class="warning"></p>
 
 <hr>
@@ -77,6 +89,12 @@ button{cursor:pointer}
 <canvas id="barChart"></canvas>
 <canvas id="pieChart"></canvas>
 
+<!-- UNDO BOX -->
+<div id="undoBox">
+Item deleted
+<button onclick="undoDelete()">Undo</button>
+</div>
+
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
@@ -84,6 +102,8 @@ import {
 getFirestore,
 collection,
 addDoc,
+deleteDoc,
+doc,
 onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
@@ -101,6 +121,7 @@ const db = getFirestore(app);
 
 let incomes = [];
 let expenses = [];
+let lastDeleted = null;
 
 /* ================= INCOME ================= */
 
@@ -144,21 +165,58 @@ expenses = snap.docs.map(d=>({id:d.id,...d.data()}));
 render();
 });
 
+/* ================= DELETE ================= */
+
+window.deleteExpense = async function(id){
+
+let item = expenses.find(e=>e.id===id);
+lastDeleted = item;
+
+await deleteDoc(doc(db,"expenses",id));
+
+showUndo();
+}
+
+/* ================= UNDO ================= */
+
+function showUndo(){
+document.getElementById("undoBox").style.display="block";
+
+setTimeout(()=>{
+document.getElementById("undoBox").style.display="none";
+lastDeleted=null;
+},8000);
+}
+
+window.undoDelete = async function(){
+
+if(!lastDeleted) return;
+
+await addDoc(collection(db,"expenses"),{
+name:lastDeleted.name,
+amount:lastDeleted.amount,
+category:lastDeleted.category,
+date:lastDeleted.date
+});
+
+document.getElementById("undoBox").style.display="none";
+lastDeleted=null;
+}
+
 /* ================= RENDER ================= */
 
 function render(){
 
-// TOTALS
 let totalIncome = incomes.reduce((a,b)=>a+b.amount,0);
 let totalExpense = expenses.reduce((a,b)=>a+b.amount,0);
 let balance = totalIncome - totalExpense;
 
 // UI
-document.getElementById("incomeTotal").innerText = "¥"+totalIncome;
-document.getElementById("expenseTotal").innerText = "¥"+totalExpense;
-document.getElementById("balance").innerText = "¥"+balance;
+document.getElementById("incomeTotal").innerText="¥"+totalIncome;
+document.getElementById("expenseTotal").innerText="¥"+totalExpense;
+document.getElementById("balance").innerText="¥"+balance;
 
-/* LISTS */
+// list
 document.getElementById("incomeList").innerHTML =
 incomes.map(i=>`<div class="card">💵 ${i.name} - ¥${i.amount}</div>`).join("");
 
@@ -166,56 +224,42 @@ document.getElementById("expenseList").innerHTML =
 expenses.map(e=>`
 <div class="card">
 ${e.date||"-"} | ${e.category}<br>
-${e.name} - ¥${e.amount}
+${e.name} - ¥${e.amount}<br><br>
+<button onclick="deleteExpense('${e.id}')">🗑 Delete</button>
 </div>
 `).join("");
 
-/* ================= BUDGET AI ALERT ================= */
-
+// budget AI
 let budget = Number(document.getElementById("budget").value || 0);
-let percent = budget > 0 ? (totalExpense / budget) * 100 : 0;
+let percent = budget>0?(totalExpense/budget)*100:0;
 
-let status = "";
-let color = "";
+let text="";
+let color="";
 
-if(budget > 0){
-if(percent >= 100){
-status = "🚨 OVER BUDGET!";
-color = "red";
-}
-else if(percent >= 90){
-status = "⚠️ Danger (90% used)";
-color = "orange";
-}
-else if(percent >= 70){
-status = "🟡 Warning (70% used)";
-color = "goldenrod";
-}
-else{
-status = "🟢 Safe";
-color = "green";
+if(budget>0){
+if(percent>=100){text="🚨 OVER BUDGET";color="red";}
+else if(percent>=90){text="⚠️ Danger";color="orange";}
+else if(percent>=70){text="🟡 Warning";color="goldenrod";}
+else{text="🟢 Safe";color="green";}
+
+let el=document.getElementById("budgetStatus");
+el.innerText=text+" ("+percent.toFixed(1)+"%)";
+el.style.color=color;
 }
 
-document.getElementById("budgetStatus").innerText =
-`${status} (${percent.toFixed(1)}%)`;
-
-document.getElementById("budgetStatus").style.color = color;
-}
-
-/* CHARTS */
 drawCharts(totalIncome,totalExpense,expenses);
 }
 
-/* ================= CHART ================= */
+/* ================= CHARTS ================= */
 
 let bar,pie;
 
-function drawCharts(income,expense,expensesList){
+function drawCharts(income,expense,list){
 
 if(bar) bar.destroy();
 if(pie) pie.destroy();
 
-bar = new Chart(document.getElementById("barChart"),{
+bar=new Chart(document.getElementById("barChart"),{
 type:"bar",
 data:{
 labels:["Income","Expense"],
@@ -223,12 +267,12 @@ datasets:[{data:[income,expense]}]
 }
 });
 
-let cat = {};
-expensesList.forEach(e=>{
+let cat={};
+list.forEach(e=>{
 cat[e.category]=(cat[e.category]||0)+e.amount;
 });
 
-pie = new Chart(document.getElementById("pieChart"),{
+pie=new Chart(document.getElementById("pieChart"),{
 type:"pie",
 data:{
 labels:Object.keys(cat),
