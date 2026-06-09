@@ -3,19 +3,55 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Income Tracker </title>
+<title>Income Tracker</title>
+
 <style>
-body{font-family:Arial;max-width:800px;margin:auto;padding:20px}
-input,select,button{width:100%;padding:10px;margin:5px 0;box-sizing:border-box}
-.card{border:1px solid #ddd;padding:10px;margin:10px 0;border-radius:8px}
-.row{display:flex;gap:10px}
-.row>*{flex:1}
-.small-btn{width:auto;padding:6px 10px}
-.warning{color:red;font-weight:bold}
+body{
+font-family:Arial;
+max-width:800px;
+margin:auto;
+padding:20px;
+}
+
+input,select,button{
+width:100%;
+padding:10px;
+margin:5px 0;
+box-sizing:border-box;
+}
+
+.card{
+border:1px solid #ddd;
+padding:10px;
+margin:10px 0;
+border-radius:8px;
+}
+
+.row{
+display:flex;
+gap:10px;
+}
+
+.row>*{
+flex:1;
+}
+
+.small-btn{
+width:auto;
+padding:6px 10px;
+}
+
+.warning{
+color:red;
+font-weight:bold;
+}
 </style>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
+
 <h2>💰 Income Tracker V2</h2>
 
 <label>Monthly Income</label>
@@ -26,6 +62,7 @@ input,select,button{width:100%;padding:10px;margin:5px 0;box-sizing:border-box}
 <label>Expense Name</label>
 <input type="text" id="name">
 </div>
+
 <div>
 <label>Amount</label>
 <input type="number" id="amount">
@@ -43,6 +80,7 @@ input,select,button{width:100%;padding:10px;margin:5px 0;box-sizing:border-box}
 <option>Other</option>
 </select>
 </div>
+
 <div>
 <label>Date</label>
 <input type="date" id="date">
@@ -50,32 +88,17 @@ input,select,button{width:100%;padding:10px;margin:5px 0;box-sizing:border-box}
 </div>
 
 <button onclick="addExpense()">Add Expense</button>
-<!-- Search -->
-<input
-type="text"
-id="search"
-placeholder="🔍 Search Expense">
 
-<!-- Budget Progress -->
+<input type="text" id="search" placeholder="🔍 Search Expense">
+
 <h3>📈 Budget Usage</h3>
-
-<progress
-id="budgetBar"
-value="0"
-max="100"
-style="width:100%">
-</progress>
-
+<progress id="budgetBar" value="0" max="100" style="width:100%"></progress>
 <p id="budgetPercent"></p>
 
-<!-- Savings Rate -->
 <h3>💹 Savings Rate</h3>
-
 <p id="savingsRate"></p>
 
-<!-- Monthly Trend -->
 <h3>📊 Monthly Expense Trend</h3>
-
 <canvas id="barChart"></canvas>
 
 <h3>Expenses</h3>
@@ -92,197 +115,183 @@ style="width:100%">
 <canvas id="pieChart"></canvas>
 
 <script>
-let expenses=JSON.parse(localStorage.getItem("expenses"))||[];
-let pie;
-let barChart;
+let expenses = JSON.parse(localStorage.getItem("expenses")) || [];
+let pie = null;
+let barChart = null;
 
-document.getElementById("income").value=localStorage.getItem("income")||"";
-document.getElementById("income").addEventListener("input",()=>{
-localStorage.setItem("income",document.getElementById("income").value);
+// load income
+document.getElementById("income").value =
+localStorage.getItem("income") || "";
+
+document.getElementById("income").addEventListener("input", () => {
+localStorage.setItem("income", document.getElementById("income").value);
 update();
 });
-document.getElementById("search")
-.addEventListener("input", update);
 
-function yen(n){return "¥"+Number(n).toLocaleString("ja-JP");}
+document.getElementById("search").addEventListener("input", update);
+
+function yen(n){
+return "¥" + Number(n).toLocaleString("ja-JP");
+}
 
 function save(){
-localStorage.setItem("expenses",JSON.stringify(expenses));
+localStorage.setItem("expenses", JSON.stringify(expenses));
 }
 
 function addExpense(){
-const name=document.getElementById("name").value;
-const amount=Number(document.getElementById("amount").value);
-const category=document.getElementById("category").value;
-const date=document.getElementById("date").value;
+const name = document.getElementById("name").value;
+const amount = Number(document.getElementById("amount").value);
+const category = document.getElementById("category").value;
+const date = document.getElementById("date").value;
 
-if(!name || amount<=0) return;
+if(!name || amount <= 0) return;
 
-expenses.push({name,amount,category,date});
+expenses.push({name, amount, category, date});
 save();
 update();
 
-document.getElementById("name").value="";
-document.getElementById("amount").value="";
+document.getElementById("name").value = "";
+document.getElementById("amount").value = "";
 }
 
 function editExpense(i){
-const e=expenses[i];
-const name=prompt("Expense Name",e.name);
-const amount=prompt("Amount",e.amount);
+const e = expenses[i];
+const name = prompt("Expense Name", e.name);
+const amount = prompt("Amount", e.amount);
+
 if(name && amount){
-expenses[i].name=name;
-expenses[i].amount=Number(amount);
+expenses[i].name = name;
+expenses[i].amount = Number(amount);
 save();
 update();
 }
 }
 
 function deleteExpense(i){
-expenses.splice(i,1);
+expenses.splice(i, 1);
 save();
 update();
 }
 
 function update(){
-const income=Number(document.getElementById("income").value||0);
-let total=0;
 
-const list=document.getElementById("list");
-list.innerHTML="";
+const income = Number(document.getElementById("income").value || 0);
+let total = 0;
 
-const keyword =
-document.getElementById("search")
-.value.toLowerCase();
+const list = document.getElementById("list");
+list.innerHTML = "";
 
-expenses
-.filter(e =>
-e.name.toLowerCase()
-.includes(keyword)
-)
-.forEach((e,i)=>{
-total+=e.amount;
-list.innerHTML+=`
+const keyword = document.getElementById("search").value.toLowerCase();
+
+const filtered = expenses.filter(e =>
+e.name.toLowerCase().includes(keyword)
+);
+
+filtered.forEach((e, i) => {
+total += e.amount;
+
+list.innerHTML += `
 <div class="card">
-${(e.date ? new Date(e.date).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "-")} | ${e.category}<br>
-${e.name} - ${yen(e.amount)}
-<br><br>
+${e.date ? new Date(e.date).toLocaleDateString("en-GB") : "-"} | ${e.category}<br>
+${e.name} - ${yen(e.amount)}<br><br>
+
 <button class="small-btn" onclick="editExpense(${i})">Edit</button>
 <button class="small-btn" onclick="deleteExpense(${i})">Delete</button>
-</div>`;
+</div>
+`;
 });
 
-const balance=income-total;
+const balance = income - total;
 
-incomeText.innerText=yen(income);
-expenseText.innerText=yen(total);
-balanceText.innerText=yen(balance);
+// UI update safe way
+document.getElementById("incomeText").innerText = yen(income);
+document.getElementById("expenseText").innerText = yen(total);
+document.getElementById("balanceText").innerText = yen(balance);
 
-warning.innerText=total>income?"⚠️ Expense is higher than Income":"";
-/* Budget Usage */
+document.getElementById("warning").innerText =
+total > income ? "⚠️ Expense is higher than Income" : "";
 
-const percent =
-income > 0
-? (total / income) * 100
-: 0;
+// budget %
+const percent = income > 0 ? (total / income) * 100 : 0;
 
-document
-.getElementById("budgetBar")
-.value = percent;
+document.getElementById("budgetBar").value = percent;
+document.getElementById("budgetPercent").innerText =
+percent.toFixed(1) + "% Used";
 
-document
-.getElementById("budgetPercent")
-.innerText =
-percent.toFixed(1)
-+ "% Used";
+// savings rate
+const savingsRate = income > 0 ? (balance / income) * 100 : 0;
+document.getElementById("savingsRate").innerText =
+savingsRate.toFixed(1) + "%";
 
-/* Savings Rate */
-
-const savingsRate =
-income > 0
-? ((balance / income) * 100)
-: 0;
-
-document
-.getElementById("savingsRate")
-.innerText =
-savingsRate.toFixed(1)
-+ "%";
-
-/* Monthly Chart */
-
+// monthly totals
 const monthlyTotals = {};
 
-expenses.forEach(e=>{
-
+expenses.forEach(e => {
 if(!e.date) return;
-
-const month =
-e.date.substring(0,7);
-
-monthlyTotals[month] =
-(monthlyTotals[month] || 0)
-+ e.amount;
-
+const m = e.date.substring(0,7);
+monthlyTotals[m] = (monthlyTotals[m] || 0) + e.amount;
 });
 
-const labels =
-Object.keys(monthlyTotals);
+// chart labels fix
+const monthLabels = Object.keys(monthlyTotals);
+const monthValues = Object.values(monthlyTotals);
 
-const values =
-Object.values(monthlyTotals);
+if(barChart) barChart.destroy();
 
-if(barChart){
-barChart.destroy();
-}
-
-barChart =
-new Chart(
+barChart = new Chart(
 document.getElementById("barChart"),
 {
-type:"bar",
-data:{
-labels:labels,
-datasets:[
-{
-label:"Monthly Expense",
-data:values
-}
-]
+type: "bar",
+data: {
+labels: monthLabels,
+datasets: [{
+label: "Monthly Expense",
+data: monthValues
+}]
 }
 }
 );
-const report={};
-const categoryTotals={};
 
-expenses.forEach(e=>{
+// category report
+const report = {};
+const categoryTotals = {};
+
+expenses.forEach(e => {
 if(e.date){
-const m=e.date.substring(0,7);
-report[m]=(report[m]||0)+e.amount;
+const m = e.date.substring(0,7);
+report[m] = (report[m] || 0) + e.amount;
 }
-categoryTotals[e.category]=(categoryTotals[e.category]||0)+e.amount;
+categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount;
 });
 
-reportDiv="";
+let reportDiv = "";
 for(const m in report){
-reportDiv+=`<div>${m} : ${yen(report[m])}</div>`;
+reportDiv += `<div>${m} : ${yen(report[m])}</div>`;
 }
-document.getElementById("report").innerHTML=reportDiv;
+document.getElementById("report").innerHTML = reportDiv;
 
-const labels=Object.keys(categoryTotals);
-const data=Object.values(categoryTotals);
+// pie chart fix
+const categoryLabels = Object.keys(categoryTotals);
+const categoryData = Object.values(categoryTotals);
 
 if(pie) pie.destroy();
 
-pie=new Chart(document.getElementById("pieChart"),{
-type:"pie",
-data:{
-labels:labels,
-datasets:[{data:data}]
+pie = new Chart(
+document.getElementById("pieChart"),
+{
+type: "pie",
+data: {
+labels: categoryLabels,
+datasets: [{
+data: categoryData
+}]
 }
-});
 }
+);
+}
+
 update();
 </script>
+
 </body>
 </html>
