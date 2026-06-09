@@ -179,7 +179,79 @@ expenseText.innerText=yen(total);
 balanceText.innerText=yen(balance);
 
 warning.innerText=total>income?"⚠️ Expense is higher than Income":"";
+/* Budget Usage */
 
+const percent =
+income > 0
+? (total / income) * 100
+: 0;
+
+document
+.getElementById("budgetBar")
+.value = percent;
+
+document
+.getElementById("budgetPercent")
+.innerText =
+percent.toFixed(1)
++ "% Used";
+
+/* Savings Rate */
+
+const savingsRate =
+income > 0
+? ((balance / income) * 100)
+: 0;
+
+document
+.getElementById("savingsRate")
+.innerText =
+savingsRate.toFixed(1)
++ "%";
+
+/* Monthly Chart */
+
+const monthlyTotals = {};
+
+expenses.forEach(e=>{
+
+if(!e.date) return;
+
+const month =
+e.date.substring(0,7);
+
+monthlyTotals[month] =
+(monthlyTotals[month] || 0)
++ e.amount;
+
+});
+
+const labels =
+Object.keys(monthlyTotals);
+
+const values =
+Object.values(monthlyTotals);
+
+if(barChart){
+barChart.destroy();
+}
+
+barChart =
+new Chart(
+document.getElementById("barChart"),
+{
+type:"bar",
+data:{
+labels:labels,
+datasets:[
+{
+label:"Monthly Expense",
+data:values
+}
+]
+}
+}
+);
 const report={};
 const categoryTotals={};
 
