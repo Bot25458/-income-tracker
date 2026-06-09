@@ -50,6 +50,33 @@ input,select,button{width:100%;padding:10px;margin:5px 0;box-sizing:border-box}
 </div>
 
 <button onclick="addExpense()">Add Expense</button>
+<!-- Search -->
+<input
+type="text"
+id="search"
+placeholder="🔍 Search Expense">
+
+<!-- Budget Progress -->
+<h3>📈 Budget Usage</h3>
+
+<progress
+id="budgetBar"
+value="0"
+max="100"
+style="width:100%">
+</progress>
+
+<p id="budgetPercent"></p>
+
+<!-- Savings Rate -->
+<h3>💹 Savings Rate</h3>
+
+<p id="savingsRate"></p>
+
+<!-- Monthly Trend -->
+<h3>📊 Monthly Expense Trend</h3>
+
+<canvas id="barChart"></canvas>
 
 <h3>Expenses</h3>
 <div id="list"></div>
