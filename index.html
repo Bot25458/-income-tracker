@@ -94,6 +94,7 @@ style="width:100%">
 <script>
 let expenses=JSON.parse(localStorage.getItem("expenses"))||[];
 let pie;
+let barChart;
 
 document.getElementById("income").value=localStorage.getItem("income")||"";
 document.getElementById("income").addEventListener("input",()=>{
