@@ -431,6 +431,23 @@ monthlyPaid += p.amount;
 document.getElementById("monthlyDebtPaid").innerText =
 "¥" + monthlyPaid;
 
+document.getElementById("paymentHistory").innerHTML =
+debtPayments
+.sort((a,b)=>
+new Date(b.date) - new Date(a.date)
+)
+.map(p=>`
+
+<div class="card">
+📅 ${p.date.substring(0,10)}
+<br>
+👤 ${p.name}
+<br>
+💰 ¥${p.amount}
+</div>
+
+`).join("");
+
 // BUDGET AI
 let budget = Number(document.getElementById("budget").value || 0);
 let percent = budget>0?(totalExpense/budget)*100:0;
