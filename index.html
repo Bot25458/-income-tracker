@@ -181,6 +181,26 @@ document.getElementById("expName").value="";
 document.getElementById("expAmount").value="";
 };
 
+window.addDebt = async function(){
+
+const name =
+document.getElementById("debtName").value;
+
+const amount =
+Number(document.getElementById("debtAmount").value);
+
+if(!name || amount<=0) return;
+
+await addDoc(collection(db,"debts"),{
+name,
+borrowed:amount,
+paid:0
+});
+
+document.getElementById("debtName").value="";
+document.getElementById("debtAmount").value="";
+}
+
 onSnapshot(collection(db,"expenses"),snap=>{
 expenses = snap.docs.map(d=>({id:d.id,...d.data()}));
 render();
