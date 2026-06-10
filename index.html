@@ -280,14 +280,40 @@ window.undoDelete = async function(){
 
 if(!lastDeleted || !lastType) return;
 
-await addDoc(collection(db,lastType==="income"?"incomes":"expenses"),{
+if(lastType==="income"){
+
+await addDoc(collection(db,"incomes"),{
+name:lastDeleted.name,
+amount:lastDeleted.amount
+});
+
+}
+else if(lastType==="expense"){
+
+await addDoc(collection(db,"expenses"),{
 name:lastDeleted.name,
 amount:lastDeleted.amount,
-...(lastType==="expense" && {
 category:lastDeleted.category,
 date:lastDeleted.date
-})
 });
+
+}
+else if(lastType==="debt"){
+
+await addDoc(collection(db,"debts"),{
+name:lastDeleted.name,
+borrowed:lastDeleted.borrowed,
+paid:lastDeleted.paid || 0
+});
+
+}
+
+document.getElementById("undoBox").style.display="none";
+
+lastDeleted = null;
+lastType = null;
+
+}
 
 document.getElementById("undoBox").style.display="none";
 lastDeleted=null;
