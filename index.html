@@ -202,6 +202,29 @@ document.getElementById("debtName").value="";
 document.getElementById("debtAmount").value="";
 }
 
+/* ================= PAY DEBT ================= */
+
+window.payDebt = async function(id){
+
+const debt =
+debts.find(d=>d.id===id);
+
+let payment =
+prompt("Payment Amount");
+
+payment = Number(payment);
+
+if(!payment || payment<=0) return;
+
+await updateDoc(
+doc(db,"debts",id),
+{
+paid:(debt.paid || 0) + payment
+}
+);
+
+}
+
 onSnapshot(collection(db,"expenses"),snap=>{
 expenses = snap.docs.map(d=>({id:d.id,...d.data()}));
 render();
