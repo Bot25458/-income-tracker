@@ -249,6 +249,14 @@ debts = snap.docs.map(d=>({id:d.id,...d.data()}));
 render();
 });
 
+onSnapshot(collection(db,"debtPayments"),snap=>{
+debtPayments = snap.docs.map(d=>({
+id:d.id,
+...d.data()
+}));
+render();
+});
+
 window.deleteDebt = async function(id){
 
 const debt = debts.find(d=>d.id===id);
