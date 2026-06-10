@@ -82,6 +82,23 @@ text-align:center;
 
 <hr>
 
+<h3>💳 Debt Tracker</h3>
+
+<div class="row">
+<input type="text" id="debtName" placeholder="Borrowed From">
+<input type="number" id="debtAmount" placeholder="Borrowed Amount">
+</div>
+
+<button onclick="addDebt()">Add Debt</button>
+
+<div id="debtList"></div>
+
+<hr>
+
+<p>Total Debt: <span id="totalDebt"></span></p>
+<p>Total Paid: <span id="totalPaid"></span></p>
+<p>Remaining Debt: <span id="remainingDebt"></span></p>
+
 <h3>📊 Summary</h3>
 <p>Total Income: <span id="incomeTotal"></span></p>
 <p>Total Expense: <span id="expenseTotal"></span></p>
