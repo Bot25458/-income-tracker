@@ -313,6 +313,49 @@ ${e.name} - ¥${e.amount}<br><br>
 </div>
 `).join("");
 
+// DEBT LIST
+
+let totalDebt = 0;
+let totalPaid = 0;
+
+document.getElementById("debtList").innerHTML =
+debts.map(d=>{
+
+const remaining =
+d.borrowed - (d.paid || 0);
+
+totalDebt += d.borrowed;
+totalPaid += (d.paid || 0);
+
+return `
+<div class="card">
+👤 ${d.name}<br>
+Borrowed: ¥${d.borrowed}<br>
+Paid: ¥${d.paid || 0}<br>
+Remaining: ¥${remaining}<br><br>
+
+<button onclick="payDebt('${d.id}')">
+💰 Add Payment
+</button>
+
+<button onclick="deleteDebt('${d.id}')">
+🗑 Delete
+</button>
+
+</div>
+`;
+
+}).join("");
+
+document.getElementById("totalDebt").innerText =
+"¥" + totalDebt;
+
+document.getElementById("totalPaid").innerText =
+"¥" + totalPaid;
+
+document.getElementById("remainingDebt").innerText =
+"¥" + (totalDebt - totalPaid);
+
 // BUDGET AI
 let budget = Number(document.getElementById("budget").value || 0);
 let percent = budget>0?(totalExpense/budget)*100:0;
