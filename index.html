@@ -229,6 +229,13 @@ paid:(debt.paid || 0) + payment
 }
 );
 
+// Save Payment History
+await addDoc(collection(db,"debtPayments"),{
+debtId:id,
+name:debt.name,
+amount:payment,
+date:new Date().toISOString()
+});
 }
 
 onSnapshot(collection(db,"expenses"),snap=>{
