@@ -186,6 +186,11 @@ expenses = snap.docs.map(d=>({id:d.id,...d.data()}));
 render();
 });
 
+onSnapshot(collection(db,"debts"),snap=>{
+debts = snap.docs.map(d=>({id:d.id,...d.data()}));
+render();
+});
+
 /* ================= DELETE (INCOME + EXPENSE) ================= */
 
 window.deleteItem = async function(id,type){
