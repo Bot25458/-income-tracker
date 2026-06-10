@@ -444,6 +444,12 @@ new Date(b.date) - new Date(a.date)
 👤 ${p.name}
 <br>
 💰 ¥${p.amount}
+<br><br>
+
+<button onclick="deletePayment('${p.id}')">
+🗑 Delete Payment
+</button>
+
 </div>
 
 `).join("");
