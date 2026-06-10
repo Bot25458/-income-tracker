@@ -410,6 +410,27 @@ document.getElementById("totalPaid").innerText =
 document.getElementById("remainingDebt").innerText =
 "¥" + (totalDebt - totalPaid);
 
+// Monthly Debt Report
+
+const currentMonth =
+new Date().toISOString().substring(0,7);
+
+let monthlyPaid = 0;
+
+debtPayments.forEach(p=>{
+
+if(
+p.date &&
+p.date.substring(0,7) === currentMonth
+){
+monthlyPaid += p.amount;
+}
+
+});
+
+document.getElementById("monthlyDebtPaid").innerText =
+"¥" + monthlyPaid;
+
 // BUDGET AI
 let budget = Number(document.getElementById("budget").value || 0);
 let percent = budget>0?(totalExpense/budget)*100:0;
