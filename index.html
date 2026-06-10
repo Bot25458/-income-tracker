@@ -269,6 +269,15 @@ await deleteDoc(doc(db,"debts",id));
 showUndo();
 
 }
+window.deletePayment = async function(id){
+
+if(!confirm("Delete this payment?")) return;
+
+await deleteDoc(
+doc(db,"debtPayments",id)
+);
+
+}
 
 /* ================= DELETE (INCOME + EXPENSE) ================= */
 
